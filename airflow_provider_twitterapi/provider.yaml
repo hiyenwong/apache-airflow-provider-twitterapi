@@ -1,0 +1,29 @@
+package-name: apache-airflow-provider-twitterapi
+name: TwitterAPI.io Provider
+description: Apache Airflow provider for TwitterAPI.io
+versions:
+  - 0.1.0
+
+dependencies:
+  - apache-airflow>=2.11.0
+  - requests>=2.31.0
+
+integrations:
+  - integration-name: TwitterAPI.io
+    external-doc-url: https://docs.twitterapi.io/
+    logo: /integration-logos/twitterapi.png
+    tags: [service]
+
+operators:
+  - integration-name: TwitterAPI.io
+    python-modules:
+      - airflow_provider_twitterapi.operators.twitterapi
+
+hooks:
+  - integration-name: TwitterAPI.io
+    python-modules:
+      - airflow_provider_twitterapi.hooks.twitterapi
+
+connection-types:
+  - hook-class-name: airflow_provider_twitterapi.hooks.twitterapi.TwitterApiHook
+    connection-type: twitterapi
