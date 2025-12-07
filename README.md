@@ -242,5 +242,4 @@ Apache License 2.0 - see [LICENSE](LICENSE) file for details.
 ## Support
 
 - Documentation: https://docs.twitterapi.io/
-- Issues: https://github.com/yourusername/apache-airflow-provider-twitterapi/issues
-- Telegram: https://t.me/kaitoeasyapivip
+- Issues: https://github.com/hiyenwong/apache-airflow-provider-twitterapi/issues
