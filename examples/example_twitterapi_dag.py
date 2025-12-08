@@ -42,48 +42,47 @@ with DAG(
     # Get user profile by username
     get_user_profile = TwitterGetUserByUsernameOperator(
         task_id="get_user_profile",
-        username="KaitoEasyAPI",
+        username="elonmusk",
         twitterapi_conn_id="twitterapi_default",
     )
 
-    # Get user followers
+    # Get user followers (pageSize: 20-200)
     get_followers = TwitterGetUserFollowersOperator(
         task_id="get_user_followers",
-        username="KaitoEasyAPI",
-        max_results=100,
+        username="elonmusk",
+        page_size=100,
         twitterapi_conn_id="twitterapi_default",
     )
 
-    # Get user followings
+    # Get user followings (pageSize: 20-200)
     get_followings = TwitterGetUserFollowingsOperator(
         task_id="get_user_followings",
-        username="KaitoEasyAPI",
-        max_results=100,
+        username="elonmusk",
+        page_size=100,
         twitterapi_conn_id="twitterapi_default",
     )
 
-    # Get user tweets
+    # Get user tweets (can use user_id or username)
     get_user_tweets = TwitterGetUserTweetsOperator(
         task_id="get_user_tweets",
-        username="KaitoEasyAPI",
-        max_results=50,
+        username="elonmusk",
+        include_replies=False,
         twitterapi_conn_id="twitterapi_default",
     )
 
-    # Search tweets
+    # Search tweets with advanced query
+    # Query examples: "AI" OR "Twitter" from:elonmusk since:2021-12-31_23:59:59_UTC
     search_tweets = TwitterSearchTweetsOperator(
         task_id="search_tweets",
-        query="python airflow",
-        start_date="2024-01-01",
-        end_date="2024-12-31",
-        max_results=100,
+        query="from:elonmusk",
+        query_type="Latest",  # "Latest" or "Top"
         twitterapi_conn_id="twitterapi_default",
     )
 
     # Get specific tweets by IDs (example IDs)
     get_tweets = TwitterGetTweetByIdsOperator(
         task_id="get_tweets_by_ids",
-        tweet_ids=["1234567890", "0987654321"],
+        tweet_ids=["1846987139428634858", "1866332309399781537"],
         twitterapi_conn_id="twitterapi_default",
     )
 

@@ -102,8 +102,8 @@ class TwitterApiHook(BaseHook):
         :param tweet_ids: List of tweet IDs
         :return: Tweet data
         """
-        params = {"tweetIds": ",".join(tweet_ids)}
-        return self._make_request("GET", "/twitter/tweet", params=params)
+        params = {"tweet_ids": ",".join(tweet_ids)}
+        return self._make_request("GET", "/twitter/tweets", params=params)
 
     def get_user_by_username(self, username: str) -> dict[str, Any]:
         """
@@ -113,7 +113,7 @@ class TwitterApiHook(BaseHook):
         :return: User profile data
         """
         params = {"userName": username}
-        return self._make_request("GET", "/twitter/user", params=params)
+        return self._make_request("GET", "/twitter/user/info", params=params)
 
     def get_user_by_userids(self, user_ids: list[str]) -> dict[str, Any]:
         """
@@ -123,84 +123,108 @@ class TwitterApiHook(BaseHook):
         :return: User profiles data
         """
         params = {"userIds": ",".join(user_ids)}
-        return self._make_request("GET", "/twitter/user/batch", params=params)
+        return self._make_request(
+            "GET", "/twitter/user/batch_info_by_ids", params=params
+        )
 
     def search_tweets(
         self,
         query: str,
-        start_date: str | None = None,
-        end_date: str | None = None,
-        max_results: int | None = None,
+        query_type: str = "Latest",
+        cursor: str | None = None,
     ) -> dict[str, Any]:
         """
         Advanced tweet search with filters.
 
-        :param query: Search query
-        :param start_date: Start date (YYYY-MM-DD)
-        :param end_date: End date (YYYY-MM-DD)
-        :param max_results: Maximum number of results
-        :return: Search results
+        :param query: Search query (e.g., "AI" OR "Twitter" from:elonmusk)
+        :param query_type: Query type - "Latest" or "Top" (default: "Latest")
+        :param cursor: Cursor for pagination (empty string for first page)
+        :return: Search results with tweets, has_next_page, and next_cursor
         """
-        params = {"query": query}
-        if start_date:
-            params["startDate"] = start_date
-        if end_date:
-            params["endDate"] = end_date
-        if max_results:
-            params["maxResults"] = max_results
+        params: dict[str, Any] = {"query": query, "queryType": query_type}
+        if cursor is not None:
+            params["cursor"] = cursor
 
-        return self._make_request("GET", "/twitter/search", params=params)
+        return self._make_request(
+            "GET", "/twitter/tweet/advanced_search", params=params
+        )
 
     def get_user_followers(
-        self, username: str, max_results: int | None = None
+        self,
+        username: str,
+        cursor: str | None = None,
+        page_size: int = 200,
     ) -> dict[str, Any]:
         """
         Get followers list for a user.
 
         :param username: Twitter username (without @)
-        :param max_results: Maximum number of results
-        :return: Followers data
+        :param cursor: Cursor for pagination (empty string for first page)
+        :param page_size: Number of followers per page (20-200, default: 200)
+        :return: Followers data with followers array, has_next_page, next_cursor
         """
-        params = {"userName": username}
-        if max_results:
-            params["maxResults"] = max_results
+        params: dict[str, Any] = {"userName": username, "pageSize": page_size}
+        if cursor is not None:
+            params["cursor"] = cursor
 
         return self._make_request("GET", "/twitter/user/followers", params=params)
 
     def get_user_followings(
-        self, username: str, max_results: int | None = None
+        self,
+        username: str,
+        cursor: str | None = None,
+        page_size: int = 200,
     ) -> dict[str, Any]:
         """
         Get following list for a user.
 
         :param username: Twitter username (without @)
-        :param max_results: Maximum number of results
-        :return: Following data
+        :param cursor: Cursor for pagination (empty string for first page)
+        :param page_size: Number of followings per page (20-200, default: 200)
+        :return: Following data with followings array, has_next_page, next_cursor
         """
-        params = {"userName": username}
-        if max_results:
-            params["maxResults"] = max_results
+        params: dict[str, Any] = {"userName": username, "pageSize": page_size}
+        if cursor is not None:
+            params["cursor"] = cursor
 
         return self._make_request("GET", "/twitter/user/followings", params=params)
 
     def get_user_tweets(
-        self, username: str, max_results: int | None = None
+        self,
+        user_id: str | None = None,
+        username: str | None = None,
+        cursor: str | None = None,
+        include_replies: bool = False,
     ) -> dict[str, Any]:
         """
         Get tweets from a user's timeline.
 
+        :param user_id: Twitter user ID (recommended, more stable and faster)
         :param username: Twitter username (without @)
-        :param max_results: Maximum number of results
-        :return: User tweets data
+        :param cursor: Cursor for pagination (empty string for first page)
+        :param include_replies: Whether to include replies (default: False)
+        :return: User tweets data with tweets array, has_next_page, next_cursor
+
+        Note: userId and userName are mutually exclusive. If both are provided,
+              userId will be used.
         """
-        params = {"userName": username}
-        if max_results:
-            params["maxResults"] = max_results
+        params: dict[str, Any] = {"includeReplies": str(include_replies).lower()}
+        if user_id:
+            params["userId"] = user_id
+        elif username:
+            params["userName"] = username
+        else:
+            from airflow.exceptions import AirflowException
 
-        return self._make_request("GET", "/twitter/user/tweets", params=params)
+            raise AirflowException("Either user_id or username must be provided")
 
-    @staticmethod
-    def get_ui_field_behaviour() -> dict[str, Any]:
+        if cursor is not None:
+            params["cursor"] = cursor
+
+        return self._make_request("GET", "/twitter/user/last_tweets", params=params)
+
+    @classmethod
+    def get_ui_field_behaviour(cls) -> dict[str, Any]:
         """Return custom field behaviour for the connection form in Airflow UI."""
         return {
             "hidden_fields": ["schema", "port", "host", "login", "extra"],

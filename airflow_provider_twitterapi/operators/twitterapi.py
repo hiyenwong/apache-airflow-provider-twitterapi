@@ -97,30 +97,27 @@ class TwitterSearchTweetsOperator(BaseOperator):
     """
     Operator to search tweets with advanced filters.
 
-    :param query: Search query
-    :param start_date: Start date (YYYY-MM-DD)
-    :param end_date: End date (YYYY-MM-DD)
-    :param max_results: Maximum number of results
+    :param query: Search query (e.g., "AI" OR "Twitter" from:elonmusk)
+    :param query_type: Query type - "Latest" or "Top" (default: "Latest")
+    :param cursor: Cursor for pagination (empty string for first page)
     :param twitterapi_conn_id: The connection ID to use
     """
 
-    template_fields = ("query", "start_date", "end_date")
+    template_fields = ("query", "cursor")
 
     def __init__(
         self,
         *,
         query: str,
-        start_date: str | None = None,
-        end_date: str | None = None,
-        max_results: int | None = None,
+        query_type: str = "Latest",
+        cursor: str | None = None,
         twitterapi_conn_id: str = "twitterapi_default",
         **kwargs,
     ) -> None:
         super().__init__(**kwargs)
         self.query = query
-        self.start_date = start_date
-        self.end_date = end_date
-        self.max_results = max_results
+        self.query_type = query_type
+        self.cursor = cursor
         self.twitterapi_conn_id = twitterapi_conn_id
 
     def execute(self, context: Any) -> dict[str, Any]:
@@ -129,9 +126,8 @@ class TwitterSearchTweetsOperator(BaseOperator):
         self.log.info(f"Searching tweets: {self.query}")
         return hook.search_tweets(
             query=self.query,
-            start_date=self.start_date,
-            end_date=self.end_date,
-            max_results=self.max_results,
+            query_type=self.query_type,
+            cursor=self.cursor,
         )
 
 
@@ -140,23 +136,26 @@ class TwitterGetUserFollowersOperator(BaseOperator):
     Operator to get followers list for a user.
 
     :param username: Twitter username (without @)
-    :param max_results: Maximum number of results
+    :param cursor: Cursor for pagination (empty string for first page)
+    :param page_size: Number of followers per page (20-200, default: 200)
     :param twitterapi_conn_id: The connection ID to use
     """
 
-    template_fields = ("username",)
+    template_fields = ("username", "cursor")
 
     def __init__(
         self,
         *,
         username: str,
-        max_results: int | None = None,
+        cursor: str | None = None,
+        page_size: int = 200,
         twitterapi_conn_id: str = "twitterapi_default",
         **kwargs,
     ) -> None:
         super().__init__(**kwargs)
         self.username = username
-        self.max_results = max_results
+        self.cursor = cursor
+        self.page_size = page_size
         self.twitterapi_conn_id = twitterapi_conn_id
 
     def execute(self, context: Any) -> dict[str, Any]:
@@ -164,7 +163,9 @@ class TwitterGetUserFollowersOperator(BaseOperator):
         hook = TwitterApiHook(twitterapi_conn_id=self.twitterapi_conn_id)
         self.log.info(f"Fetching followers for: {self.username}")
         return hook.get_user_followers(
-            username=self.username, max_results=self.max_results
+            username=self.username,
+            cursor=self.cursor,
+            page_size=self.page_size,
         )
 
 
@@ -173,23 +174,26 @@ class TwitterGetUserFollowingsOperator(BaseOperator):
     Operator to get following list for a user.
 
     :param username: Twitter username (without @)
-    :param max_results: Maximum number of results
+    :param cursor: Cursor for pagination (empty string for first page)
+    :param page_size: Number of followings per page (20-200, default: 200)
     :param twitterapi_conn_id: The connection ID to use
     """
 
-    template_fields = ("username",)
+    template_fields = ("username", "cursor")
 
     def __init__(
         self,
         *,
         username: str,
-        max_results: int | None = None,
+        cursor: str | None = None,
+        page_size: int = 200,
         twitterapi_conn_id: str = "twitterapi_default",
         **kwargs,
     ) -> None:
         super().__init__(**kwargs)
         self.username = username
-        self.max_results = max_results
+        self.cursor = cursor
+        self.page_size = page_size
         self.twitterapi_conn_id = twitterapi_conn_id
 
     def execute(self, context: Any) -> dict[str, Any]:
@@ -197,7 +201,9 @@ class TwitterGetUserFollowingsOperator(BaseOperator):
         hook = TwitterApiHook(twitterapi_conn_id=self.twitterapi_conn_id)
         self.log.info(f"Fetching followings for: {self.username}")
         return hook.get_user_followings(
-            username=self.username, max_results=self.max_results
+            username=self.username,
+            cursor=self.cursor,
+            page_size=self.page_size,
         )
 
 
@@ -205,30 +211,44 @@ class TwitterGetUserTweetsOperator(BaseOperator):
     """
     Operator to get tweets from a user's timeline.
 
+    :param user_id: Twitter user ID (recommended, more stable and faster)
     :param username: Twitter username (without @)
-    :param max_results: Maximum number of results
+    :param cursor: Cursor for pagination (empty string for first page)
+    :param include_replies: Whether to include replies (default: False)
     :param twitterapi_conn_id: The connection ID to use
+
+    Note: Either user_id or username must be provided. If both are provided,
+          user_id will be used.
     """
 
-    template_fields = ("username",)
+    template_fields = ("user_id", "username", "cursor")
 
     def __init__(
         self,
         *,
-        username: str,
-        max_results: int | None = None,
+        user_id: str | None = None,
+        username: str | None = None,
+        cursor: str | None = None,
+        include_replies: bool = False,
         twitterapi_conn_id: str = "twitterapi_default",
         **kwargs,
     ) -> None:
         super().__init__(**kwargs)
+        self.user_id = user_id
         self.username = username
-        self.max_results = max_results
+        self.cursor = cursor
+        self.include_replies = include_replies
         self.twitterapi_conn_id = twitterapi_conn_id
 
     def execute(self, context: Any) -> dict[str, Any]:
         """Execute the operator."""
         hook = TwitterApiHook(twitterapi_conn_id=self.twitterapi_conn_id)
-        self.log.info(f"Fetching tweets for: {self.username}")
+        self.log.info(
+            f"Fetching tweets for user_id={self.user_id}, username={self.username}"
+        )
         return hook.get_user_tweets(
-            username=self.username, max_results=self.max_results
+            user_id=self.user_id,
+            username=self.username,
+            cursor=self.cursor,
+            include_replies=self.include_replies,
         )
