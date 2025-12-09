@@ -1,4 +1,4 @@
-package-name: apache-airflow-provider-twitterapi
+package-name: airflow-provider-twitterapi
 name: TwitterAPI.io Provider
 description: Apache Airflow provider for TwitterAPI.io
 versions:

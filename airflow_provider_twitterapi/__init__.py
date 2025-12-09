@@ -6,7 +6,7 @@ __version__ = "0.1.2"
 def get_provider_info():
     """Return provider metadata for Airflow."""
     return {
-        "package-name": "apache-airflow-provider-twitterapi",
+        "package-name": "airflow-provider-twitterapi",
         "name": "TwitterAPI.io Provider",
         "description": "Apache Airflow provider for TwitterAPI.io",
         "versions": [__version__],

@@ -1,6 +1,6 @@
-# Apache Airflow Provider for TwitterAPI.io
+# Airflow Provider for TwitterAPI.io
 
-[![Python 3.13](https://img.shields.io/badge/python-3.13-blue.svg)](https://www.python.org/downloads/)
+[![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
 [![Apache Airflow 2.11+](https://img.shields.io/badge/airflow-2.11+-blue.svg)](https://airflow.apache.org/)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
 
@@ -10,20 +10,20 @@ A comprehensive Apache Airflow provider for [TwitterAPI.io](https://twitterapi.i
 
 - **Complete API Coverage**: Access tweets, user profiles, followers, followings, and advanced search
 - **Airflow 2.11+ Compatible**: Built for the latest Airflow features
-- **Type-Safe**: Full type hints with Python 3.13+
+- **Type-Safe**: Full type hints with Python 3.9+
 - **Easy Authentication**: Simple API key-based authentication via Airflow connections
 - **Production Ready**: Proper error handling, logging, and retry mechanisms
 
 ## Installation
 
 ```bash
-pip install apache-airflow-provider-twitterapi
+pip install airflow-provider-twitterapi
 ```
 
 Or install from source:
 
 ```bash
-git clone https://github.com/yourusername/apache-airflow-provider-twitterapi.git
+git clone https://github.com/hiyenwong/apache-airflow-provider-twitterapi.git
 cd apache-airflow-provider-twitterapi
 pip install -e .
 ```
@@ -199,7 +199,7 @@ mypy airflow_provider_twitterapi/
 ## Project Structure
 
 ```
-apache-airflow-provider-twitterapi/
+airflow-provider-twitterapi/
 ├── airflow_provider_twitterapi/
 │   ├── __init__.py
 │   ├── provider.yaml          # Provider metadata
