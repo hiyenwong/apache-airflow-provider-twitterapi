@@ -19,6 +19,7 @@ from airflow_provider_twitterapi.operators.twitterapi import (
     TwitterGetUserFollowingsOperator,
     TwitterGetUserTweetsOperator,
     TwitterSearchTweetsOperator,
+    TwitterSearchUserTweetsByDateOperator,
 )
 
 default_args = {
@@ -86,6 +87,18 @@ with DAG(
         twitterapi_conn_id="twitterapi_default",
     )
 
+    # Search user tweets by date range
+    search_user_tweets_by_date = TwitterSearchUserTweetsByDateOperator(
+        task_id="search_user_tweets_by_date",
+        username="elonmusk",
+        since="2024-01-01",
+        until="2024-01-31",
+        query_type="Latest",  # "Latest" or "Top"
+        additional_filters="",  # Optional: e.g., "lang:en -filter:replies"
+        twitterapi_conn_id="twitterapi_default",
+    )
+
     # Define task dependencies
     get_user_profile >> [get_followers, get_followings, get_user_tweets]
     search_tweets >> get_tweets
+    get_user_profile >> search_user_tweets_by_date

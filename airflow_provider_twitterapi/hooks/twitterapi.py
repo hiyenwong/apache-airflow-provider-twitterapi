@@ -223,6 +223,41 @@ class TwitterApiHook(BaseHook):
 
         return self._make_request("GET", "/twitter/user/last_tweets", params=params)
 
+    def search_user_tweets_by_date(
+        self,
+        username: str,
+        since: str,
+        until: str,
+        cursor: str | None = None,
+        query_type: str = "Latest",
+        additional_filters: str = "",
+    ) -> dict[str, Any]:
+        """
+        Search tweets from a specific user within a date range.
+
+        :param username: Twitter username (without @)
+        :param since: Start date (YYYY-MM-DD format)
+        :param until: End date (YYYY-MM-DD format)
+        :param cursor: Cursor for pagination (empty string for first page)
+        :param query_type: Query type - "Latest" or "Top" (default: "Latest")
+        :param additional_filters: Additional search filters
+            (e.g., "lang:en -filter:replies")
+        :return: Search results with tweets, has_next_page, and next_cursor
+
+        Example:
+            >>> hook = TwitterApiHook()
+            >>> result = hook.search_user_tweets_by_date(
+            ...     username="elonmusk",
+            ...     since="2024-01-01",
+            ...     until="2024-01-31"
+            ... )
+        """
+        query = f"from:{username} since:{since} until:{until}"
+        if additional_filters:
+            query = f"{query} {additional_filters}"
+
+        return self.search_tweets(query=query, query_type=query_type, cursor=cursor)
+
     @classmethod
     def get_ui_field_behaviour(cls) -> dict[str, Any]:
         """Return custom field behaviour for the connection form in Airflow UI."""

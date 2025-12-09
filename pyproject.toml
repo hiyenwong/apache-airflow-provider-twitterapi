@@ -1,6 +1,6 @@
 [project]
 name = "airflow-provider-twitterapi"
-version = "2025.12.09.post3"
+version = "2025.12.10"
 description = "Apache Airflow provider for TwitterAPI.io - integrates Twitter data access into Airflow workflows (Airflow 2.11+)"
 readme = "README.md"
 requires-python = ">=3.8"
@@ -52,6 +52,8 @@ target-version = ['py39']
 [tool.ruff]
 line-length = 88
 target-version = "py39"
+
+[tool.ruff.lint]
 select = ["E", "F", "W", "I", "N", "UP"]
 
 [tool.mypy]

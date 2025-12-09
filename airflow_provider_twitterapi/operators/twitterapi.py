@@ -252,3 +252,63 @@ class TwitterGetUserTweetsOperator(BaseOperator):
             cursor=self.cursor,
             include_replies=self.include_replies,
         )
+
+
+class TwitterSearchUserTweetsByDateOperator(BaseOperator):
+    """
+    Operator to search tweets from a specific user within a date range.
+
+    :param username: Twitter username (without @)
+    :param since: Start date (YYYY-MM-DD format)
+    :param until: End date (YYYY-MM-DD format)
+    :param cursor: Cursor for pagination (empty string for first page)
+    :param query_type: Query type - "Latest" or "Top" (default: "Latest")
+    :param additional_filters: Additional search filters
+        (e.g., "lang:en -filter:replies")
+    :param twitterapi_conn_id: The connection ID to use
+    """
+
+    template_fields = (
+        "username",
+        "since",
+        "until",
+        "cursor",
+        "additional_filters",
+    )
+
+    def __init__(
+        self,
+        *,
+        username: str,
+        since: str,
+        until: str,
+        cursor: str | None = None,
+        query_type: str = "Latest",
+        additional_filters: str = "",
+        twitterapi_conn_id: str = "twitterapi_default",
+        **kwargs: Any,
+    ) -> None:
+        super().__init__(**kwargs)
+        self.username = username
+        self.since = since
+        self.until = until
+        self.cursor = cursor
+        self.query_type = query_type
+        self.additional_filters = additional_filters
+        self.twitterapi_conn_id = twitterapi_conn_id
+
+    def execute(self, context: Any) -> dict[str, Any]:
+        """Execute the operator."""
+        hook = TwitterApiHook(twitterapi_conn_id=self.twitterapi_conn_id)
+        self.log.info(
+            f"Searching tweets from @{self.username} "
+            f"between {self.since} and {self.until}"
+        )
+        return hook.search_user_tweets_by_date(
+            username=self.username,
+            since=self.since,
+            until=self.until,
+            cursor=self.cursor,
+            query_type=self.query_type,
+            additional_filters=self.additional_filters,
+        )

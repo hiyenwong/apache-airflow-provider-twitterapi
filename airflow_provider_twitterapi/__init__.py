@@ -1,9 +1,13 @@
 """Apache Airflow Provider for TwitterAPI.io"""
 
-__version__ = "0.1.2"
+from __future__ import annotations
+
+from typing import Any
+
+__version__ = "2025.12.10"
 
 
-def get_provider_info():
+def get_provider_info() -> dict[str, Any]:
     """Return provider metadata for Airflow."""
     return {
         "package-name": "airflow-provider-twitterapi",
@@ -15,7 +19,9 @@ def get_provider_info():
         ],
         "connection-types": [
             {
-                "hook-class-name": "airflow_provider_twitterapi.hooks.twitterapi.TwitterApiHook",
+                "hook-class-name": (
+                    "airflow_provider_twitterapi.hooks.twitterapi.TwitterApiHook"
+                ),
                 "connection-type": "twitterapi",
             },
         ],

@@ -9,6 +9,7 @@ A comprehensive Apache Airflow provider for [TwitterAPI.io](https://twitterapi.i
 ## Features
 
 - **Complete API Coverage**: Access tweets, user profiles, followers, followings, and advanced search
+- **Date Range Search**: Search tweets from specific users within custom date ranges
 - **Airflow 2.11+ Compatible**: Built for the latest Airflow features
 - **Type-Safe**: Full type hints with Python 3.9+
 - **Easy Authentication**: Simple API key-based authentication via Airflow connections
@@ -54,6 +55,7 @@ from airflow import DAG
 from airflow_provider_twitterapi.operators.twitterapi import (
     TwitterGetUserByUsernameOperator,
     TwitterSearchTweetsOperator,
+    TwitterSearchUserTweetsByDateOperator,
 )
 
 with DAG(
@@ -65,14 +67,22 @@ with DAG(
     # Get user profile
     get_user = TwitterGetUserByUsernameOperator(
         task_id="get_user",
-        username="KaitoEasyAPI",
+        username="elonmusk",
     )
 
     # Search tweets
     search = TwitterSearchTweetsOperator(
         task_id="search_tweets",
         query="python airflow",
-        max_results=100,
+        query_type="Latest",
+    )
+
+    # Search user tweets by date range
+    search_by_date = TwitterSearchUserTweetsByDateOperator(
+        task_id="search_by_date",
+        username="elonmusk",
+        since="2024-01-01",
+        until="2024-01-31",
     )
 ```
 
@@ -105,9 +115,8 @@ Advanced tweet search with filters.
 search = TwitterSearchTweetsOperator(
     task_id="search",
     query="python airflow",
-    start_date="2024-01-01",
-    end_date="2024-12-31",
-    max_results=100,
+    query_type="Latest",  # "Latest" or "Top"
+    cursor=None,  # For pagination
 )
 ```
 
@@ -117,8 +126,9 @@ Get followers list for a user.
 ```python
 get_followers = TwitterGetUserFollowersOperator(
     task_id="get_followers",
-    username="KaitoEasyAPI",
-    max_results=100,
+    username="elonmusk",
+    page_size=200,  # 20-200, default: 200
+    cursor=None,  # For pagination
 )
 ```
 
@@ -128,8 +138,9 @@ Get following list for a user.
 ```python
 get_followings = TwitterGetUserFollowingsOperator(
     task_id="get_followings",
-    username="KaitoEasyAPI",
-    max_results=100,
+    username="elonmusk",
+    page_size=200,  # 20-200, default: 200
+    cursor=None,  # For pagination
 )
 ```
 
@@ -139,8 +150,23 @@ Get tweets from a user's timeline.
 ```python
 get_tweets = TwitterGetUserTweetsOperator(
     task_id="get_user_tweets",
-    username="KaitoEasyAPI",
-    max_results=50,
+    username="elonmusk",  # Or use user_id="123456789"
+    include_replies=False,
+    cursor=None,  # For pagination
+)
+```
+
+### TwitterSearchUserTweetsByDateOperator
+Search tweets from a specific user within a date range.
+
+```python
+search_by_date = TwitterSearchUserTweetsByDateOperator(
+    task_id="search_by_date",
+    username="elonmusk",
+    since="2024-01-01",
+    until="2024-01-31",
+    query_type="Latest",  # "Latest" or "Top"
+    additional_filters="",  # Optional: "lang:en -filter:replies"
 )
 ```
 
@@ -154,13 +180,20 @@ from airflow_provider_twitterapi.hooks.twitterapi import TwitterApiHook
 hook = TwitterApiHook(twitterapi_conn_id="twitterapi_default")
 
 # Get user profile
-user_data = hook.get_user_by_username("KaitoEasyAPI")
+user_data = hook.get_user_by_username("elonmusk")
 
 # Search tweets
 tweets = hook.search_tweets(
     query="python",
-    start_date="2024-01-01",
-    max_results=100
+    query_type="Latest",
+)
+
+# Search user tweets by date range
+user_tweets = hook.search_user_tweets_by_date(
+    username="elonmusk",
+    since="2024-01-01",
+    until="2024-01-31",
+    additional_filters="lang:en",
 )
 ```
 
