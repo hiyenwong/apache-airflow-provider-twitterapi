@@ -20,11 +20,12 @@ pip install -e .
 
 - **Connection Id**: 输入连接标识符，例如 `twitterapi_default`
 - **Connection Type**: 从下拉菜单选择 **TwitterAPI.io**
-- **API Key** (密码字段): 输入你的 TwitterAPI.io API Key
-  - 示例: `new1_b099c7579e9444ec89d1c0fdcf7c2905`
+- **API Key** (密码字段): 输入你的 TwitterAPI.io 或 Xquik API Key
+  - 示例: `YOUR_API_KEY`
   - 获取地址: https://twitterapi.io/dashboard
+- **Extra** (可选): 如果使用 Xquik，填写 `{"api_provider": "xquik"}`
 
-**注意**: 其他字段（Host, Schema, Login, Port, Extra）已被自动隐藏，因为不需要配置。
+**注意**: Host、Schema、Login、Port 已被自动隐藏，因为不需要配置。Extra 仅在切换 provider 时使用。
 
 ### 4. 测试连接
 
@@ -70,19 +71,24 @@ get_tweets = TwitterGetUserTweetsOperator(
 # 方式 1: 使用 password 参数
 airflow connections add twitterapi_default \
     --conn-type twitterapi \
-    --conn-password "new1_b099c7579e9444ec89d1c0fdcf7c2905"
+    --conn-password "YOUR_API_KEY"
+
+# 使用 Xquik backend
+airflow connections add xquik_default \
+    --conn-type twitterapi \
+    --conn-password "YOUR_XQUIK_API_KEY" \
+    --conn-extra '{"api_provider": "xquik"}'
 
 # 方式 2: 使用 URI
 airflow connections add twitterapi_default \
-    --conn-uri "twitterapi://:new1_b099c7579e9444ec89d1c0fdcf7c2905@"
+    --conn-uri "twitterapi://:YOUR_API_KEY@"
 ```
 
 ## 获取 API Key
 
-1. 访问 https://twitterapi.io
+1. 访问 https://twitterapi.io 或 https://dashboard.xquik.com
 2. 注册账号
-3. 前往 Dashboard: https://twitterapi.io/dashboard
-4. 复制你的 API Key（格式通常为 `new1_xxxxxx`）
+3. 复制你的 API Key
 
 ## 故障排查
 

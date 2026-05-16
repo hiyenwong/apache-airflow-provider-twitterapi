@@ -57,7 +57,12 @@ http://localhost:8080
    │                                                     │
    │ API Key                                             │
    │ ┌─────────────────────────────────────────────────┐ │
-   │ │ new1_b099c7579e9444ec89d1c0fdcf7c2905          │ │
+   │ │ YOUR_API_KEY                                    │ │
+   │ └─────────────────────────────────────────────────┘ │
+   │                                                     │
+   │ Extra                                               │
+   │ ┌─────────────────────────────────────────────────┐ │
+   │ │ {"api_provider": "xquik"}                       │ │
    │ └─────────────────────────────────────────────────┘ │
    │                                                     │
    │ [ Test ]  [ Save ]  [ Cancel ]                     │
@@ -74,9 +79,13 @@ http://localhost:8080
      - 下拉菜单中查找 "TwitterAPI.io" 或 "twitterapi"
      - 如果看不到，说明 provider 未正确安装
    
-   - **API Key**: 输入你的 TwitterAPI.io API Key
-     - 格式通常是 `new1_xxxxxxxxxxxxx`
-     - 从 https://twitterapi.io/dashboard 获取
+   - **API Key**: 输入你的 TwitterAPI.io 或 Xquik API Key
+     - 从 https://twitterapi.io/dashboard 或 https://dashboard.xquik.com 获取
+
+   - **Extra**（可选）: 使用 Xquik backend 时填写：
+     ```json
+     {"api_provider": "xquik"}
+     ```
 
 4. 点击 **Save** 保存
 
@@ -187,11 +196,17 @@ with DAG(
 conda activate airflow2
 airflow connections add twitterapi_default \
     --conn-type twitterapi \
-    --conn-password "new1_b099c7579e9444ec89d1c0fdcf7c2905"
+    --conn-password "YOUR_API_KEY"
+
+# Xquik backend
+airflow connections add xquik_default \
+    --conn-type twitterapi \
+    --conn-password "YOUR_XQUIK_API_KEY" \
+    --conn-extra '{"api_provider": "xquik"}'
 
 # 方法 2: 使用 URI
 airflow connections add twitterapi_default \
-    --conn-uri "twitterapi://:new1_b099c7579e9444ec89d1c0fdcf7c2905@"
+    --conn-uri "twitterapi://:YOUR_API_KEY@"
 
 # 验证连接已创建
 airflow connections get twitterapi_default
@@ -206,6 +221,7 @@ airflow connections get twitterapi_default
 - [ ] 在 UI 中能看到 "TwitterAPI.io" 连接类型
 - [ ] 连接已保存，Connection Id 为 `twitterapi_default`
 - [ ] API Key 已正确填写
+- [ ] 使用 Xquik 时 Extra 已设置为 `{"api_provider": "xquik"}`
 - [ ] 可以在 DAG 中使用 TwitterAPI operators
 
 ---
