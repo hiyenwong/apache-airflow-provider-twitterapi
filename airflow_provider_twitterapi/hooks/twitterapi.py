@@ -3,10 +3,16 @@
 from __future__ import annotations
 
 from typing import Any
+from urllib.parse import quote
 
 import requests
 from airflow.exceptions import AirflowException
 from airflow.hooks.base import BaseHook
+
+TWITTERAPI_IO_PROVIDER = "twitterapi_io"
+GETXAPI_PROVIDER = "getxapi"
+DEFAULT_TWITTERAPI_IO_BASE_URL = "https://api.twitterapi.io"
+DEFAULT_GETXAPI_BASE_URL = "https://api.getxapi.com"
 
 
 class TwitterApiHook(BaseHook):
@@ -18,6 +24,12 @@ class TwitterApiHook(BaseHook):
 
     :param twitterapi_conn_id: The connection ID to use for authentication.
     :type twitterapi_conn_id: str
+    :param api_provider: API backend to use. Supported values are
+        "twitterapi_io" and "getxapi". Connection extra can also set
+        {"api_provider": "getxapi"}.
+    :type api_provider: str | None
+    :param base_url: Optional API base URL override.
+    :type base_url: str | None
     """
 
     conn_name_attr = "twitterapi_conn_id"
@@ -25,11 +37,53 @@ class TwitterApiHook(BaseHook):
     conn_type = "twitterapi"
     hook_name = "TwitterAPI.io"
 
-    def __init__(self, twitterapi_conn_id: str = default_conn_name) -> None:
+    def __init__(
+        self,
+        twitterapi_conn_id: str = default_conn_name,
+        api_provider: str | None = None,
+        base_url: str | None = None,
+    ) -> None:
         super().__init__()
         self.twitterapi_conn_id = twitterapi_conn_id
-        self.base_url = "https://api.twitterapi.io"
+        self._api_provider = self._normalize_api_provider(api_provider)
+        self._base_url_override = base_url.rstrip("/") if base_url else None
+        self.base_url = self._default_base_url(self._api_provider)
         self._api_key: str | None = None
+        self._conn_extra: dict[str, Any] = {}
+
+    @staticmethod
+    def _normalize_api_provider(provider: str | None) -> str | None:
+        """Normalize API provider aliases."""
+        if provider is None or not str(provider).strip():
+            return None
+
+        normalized = str(provider).strip().lower().replace("-", "_")
+        if normalized in {"twitterapi", "twitterapi.io", TWITTERAPI_IO_PROVIDER}:
+            return TWITTERAPI_IO_PROVIDER
+        if normalized in {GETXAPI_PROVIDER, "getxapi.com", "get_xapi"}:
+            return GETXAPI_PROVIDER
+
+        raise AirflowException(
+            "Unsupported API provider. Use 'twitterapi_io' or 'getxapi'."
+        )
+
+    @staticmethod
+    def _default_base_url(provider: str | None) -> str:
+        """Return the default base URL for an API provider."""
+        if provider == GETXAPI_PROVIDER:
+            return DEFAULT_GETXAPI_BASE_URL
+        return DEFAULT_TWITTERAPI_IO_BASE_URL
+
+    def _get_api_provider(self) -> str:
+        """Return the configured API provider, loading connection extra if needed."""
+        if not self._api_provider:
+            self.get_conn()
+        return self._api_provider or TWITTERAPI_IO_PROVIDER
+
+    @staticmethod
+    def _path_part(value: str) -> str:
+        """Escape a user or tweet identifier for use in an endpoint path."""
+        return quote(value.lstrip("@"), safe="")
 
     def get_conn(self) -> str:
         """
@@ -42,6 +96,20 @@ class TwitterApiHook(BaseHook):
             return self._api_key
 
         conn = self.get_connection(self.twitterapi_conn_id)
+        self._conn_extra = conn.extra_dejson or {}
+
+        if not self._api_provider:
+            self._api_provider = self._normalize_api_provider(
+                self._conn_extra.get("api_provider")
+                or self._conn_extra.get("provider")
+                or TWITTERAPI_IO_PROVIDER
+            )
+
+        base_url = self._base_url_override or self._conn_extra.get("base_url")
+        if base_url:
+            self.base_url = str(base_url).strip().rstrip("/")
+        else:
+            self.base_url = self._default_base_url(self._api_provider)
 
         # API key can be stored in password field or in extra
         if conn.password:
@@ -64,7 +132,7 @@ class TwitterApiHook(BaseHook):
         json_data: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         """
-        Make an HTTP request to the TwitterAPI.io API.
+        Make an HTTP request to the configured API.
 
         :param method: HTTP method (GET, POST, etc.)
         :param endpoint: API endpoint path
@@ -75,7 +143,10 @@ class TwitterApiHook(BaseHook):
         """
         api_key = self.get_conn()
         url = f"{self.base_url}{endpoint}"
-        headers = {"x-api-key": api_key}
+        if self._get_api_provider() == GETXAPI_PROVIDER:
+            headers = {"Authorization": f"Bearer {api_key}"}
+        else:
+            headers = {"x-api-key": api_key}
 
         self.log.info(f"Making {method} request to {url}")
 
@@ -102,6 +173,10 @@ class TwitterApiHook(BaseHook):
         :param tweet_ids: List of tweet IDs
         :return: Tweet data
         """
+        if self._get_api_provider() == GETXAPI_PROVIDER:
+            params = {"ids": ",".join(tweet_ids)}
+            return self._make_request("GET", "/twitter/tweets", params=params)
+
         params = {"tweet_ids": ",".join(tweet_ids)}
         return self._make_request("GET", "/twitter/tweets", params=params)
 
@@ -112,6 +187,11 @@ class TwitterApiHook(BaseHook):
         :param username: Twitter username (without @)
         :return: User profile data
         """
+        if self._get_api_provider() == GETXAPI_PROVIDER:
+            return self._make_request(
+                "GET", f"/twitter/users/{self._path_part(username)}"
+            )
+
         params = {"userName": username}
         return self._make_request("GET", "/twitter/user/info", params=params)
 
@@ -122,6 +202,10 @@ class TwitterApiHook(BaseHook):
         :param user_ids: List of user IDs
         :return: User profiles data
         """
+        if self._get_api_provider() == GETXAPI_PROVIDER:
+            params = {"ids": ",".join(user_ids)}
+            return self._make_request("GET", "/twitter/users/batch", params=params)
+
         params = {"userIds": ",".join(user_ids)}
         return self._make_request(
             "GET", "/twitter/user/batch_info_by_ids", params=params
@@ -141,6 +225,14 @@ class TwitterApiHook(BaseHook):
         :param cursor: Cursor for pagination (empty string for first page)
         :return: Search results with tweets, has_next_page, and next_cursor
         """
+        if self._get_api_provider() == GETXAPI_PROVIDER:
+            params: dict[str, Any] = {"q": query, "queryType": query_type}
+            if cursor is not None:
+                params["cursor"] = cursor
+            return self._make_request(
+                "GET", "/twitter/tweet/advanced_search", params=params
+            )
+
         params: dict[str, Any] = {"query": query, "queryType": query_type}
         if cursor is not None:
             params["cursor"] = cursor
@@ -163,6 +255,16 @@ class TwitterApiHook(BaseHook):
         :param page_size: Number of followers per page (20-200, default: 200)
         :return: Followers data with followers array, has_next_page, next_cursor
         """
+        if self._get_api_provider() == GETXAPI_PROVIDER:
+            params: dict[str, Any] = {"pageSize": page_size}
+            if cursor is not None:
+                params["cursor"] = cursor
+            return self._make_request(
+                "GET",
+                f"/twitter/users/{self._path_part(username)}/followers",
+                params=params,
+            )
+
         params: dict[str, Any] = {"userName": username, "pageSize": page_size}
         if cursor is not None:
             params["cursor"] = cursor
@@ -183,6 +285,16 @@ class TwitterApiHook(BaseHook):
         :param page_size: Number of followings per page (20-200, default: 200)
         :return: Following data with followings array, has_next_page, next_cursor
         """
+        if self._get_api_provider() == GETXAPI_PROVIDER:
+            params: dict[str, Any] = {"pageSize": page_size}
+            if cursor is not None:
+                params["cursor"] = cursor
+            return self._make_request(
+                "GET",
+                f"/twitter/users/{self._path_part(username)}/following",
+                params=params,
+            )
+
         params: dict[str, Any] = {"userName": username, "pageSize": page_size}
         if cursor is not None:
             params["cursor"] = cursor
@@ -208,14 +320,26 @@ class TwitterApiHook(BaseHook):
         Note: userId and userName are mutually exclusive. If both are provided,
               userId will be used.
         """
+        if self._get_api_provider() == GETXAPI_PROVIDER:
+            identifier = user_id or username
+            if not identifier:
+                raise AirflowException("Either user_id or username must be provided")
+
+            params: dict[str, Any] = {"includeReplies": str(include_replies).lower()}
+            if cursor is not None:
+                params["cursor"] = cursor
+            return self._make_request(
+                "GET",
+                f"/twitter/users/{self._path_part(identifier)}/tweets",
+                params=params,
+            )
+
         params: dict[str, Any] = {"includeReplies": str(include_replies).lower()}
         if user_id:
             params["userId"] = user_id
         elif username:
             params["userName"] = username
         else:
-            from airflow.exceptions import AirflowException
-
             raise AirflowException("Either user_id or username must be provided")
 
         if cursor is not None:
@@ -262,11 +386,16 @@ class TwitterApiHook(BaseHook):
     def get_ui_field_behaviour(cls) -> dict[str, Any]:
         """Return custom field behaviour for the connection form in Airflow UI."""
         return {
-            "hidden_fields": ["schema", "port", "host", "login", "extra"],
+            "hidden_fields": ["schema", "port", "host", "login"],
             "relabeling": {
                 "password": "API Key",
+                "extra": "Provider Options",
             },
             "placeholders": {
-                "password": "Your TwitterAPI.io API key (x-api-key)",
+                "password": "TwitterAPI.io or GetXAPI API key",
+                "extra": (
+                    '{"api_provider": "twitterapi_io"} or '
+                    '{"api_provider": "getxapi"}'
+                ),
             },
         }
