@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+
+### Added
+- Optional Xquik backend for the existing hook and operators via
+  `api_provider="xquik"` or connection extra `{"api_provider": "xquik"}`.
+- Xquik endpoint mapping for tweet lookup, user lookup, tweet search,
+  user tweets, followers, and following.
+
 ## [2025.12.10] - 2025-12-10
 
 ### Added

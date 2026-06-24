@@ -4,7 +4,10 @@
 [![Apache Airflow 2.11+](https://img.shields.io/badge/airflow-2.11+-blue.svg)](https://airflow.apache.org/)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
 
-A comprehensive Apache Airflow provider for [TwitterAPI.io](https://twitterapi.io), enabling seamless integration of Twitter data into your Airflow workflows.
+A comprehensive Apache Airflow provider for [TwitterAPI.io](https://twitterapi.io),
+enabling seamless integration of Twitter data into your Airflow workflows. The
+same hook and operators can also use [Xquik](https://xquik.com/api/v1) as an
+optional X/Twitter API backend.
 
 ## Features
 
@@ -13,6 +16,8 @@ A comprehensive Apache Airflow provider for [TwitterAPI.io](https://twitterapi.i
 - **Airflow 2.11+ Compatible**: Built for the latest Airflow features
 - **Type-Safe**: Full type hints with Python 3.9+
 - **Easy Authentication**: Simple API key-based authentication via Airflow connections
+- **Optional Xquik Backend**: Use the existing hook and operators with
+  `api_provider="xquik"`
 - **Production Ready**: Proper error handling, logging, and retry mechanisms
 
 ## Installation
@@ -45,6 +50,16 @@ Or via CLI:
 airflow connections add twitterapi_default \
     --conn-type twitterapi \
     --conn-password YOUR_API_KEY
+```
+
+To use Xquik instead of TwitterAPI.io, keep the same connection type and set the
+provider in connection extra:
+
+```bash
+airflow connections add xquik_default \
+    --conn-type twitterapi \
+    --conn-password YOUR_XQUIK_API_KEY \
+    --conn-extra '{"api_provider": "xquik"}'
 ```
 
 ### 2. Use in Your DAG
@@ -95,6 +110,18 @@ Get user profile information by username.
 get_user = TwitterGetUserByUsernameOperator(
     task_id="get_user",
     username="KaitoEasyAPI",
+)
+```
+
+To use Xquik for one task without changing the connection extra, pass
+`api_provider="xquik"`:
+
+```python
+get_user = TwitterGetUserByUsernameOperator(
+    task_id="get_user_xquik",
+    username="xquikcom",
+    twitterapi_conn_id="xquik_default",
+    api_provider="xquik",
 )
 ```
 
@@ -197,6 +224,17 @@ user_tweets = hook.search_user_tweets_by_date(
 )
 ```
 
+Use Xquik directly through the hook:
+
+```python
+hook = TwitterApiHook(
+    twitterapi_conn_id="xquik_default",
+    api_provider="xquik",
+)
+
+tweets = hook.search_tweets(query="from:xquikcom")
+```
+
 ## Development
 
 ### Setup Development Environment
@@ -253,6 +291,9 @@ airflow-provider-twitterapi/
 ## API Documentation
 
 For detailed API documentation, visit [TwitterAPI.io Docs](https://docs.twitterapi.io/).
+
+For the optional Xquik backend, see
+[Xquik API Docs](https://docs.xquik.com/api-reference/overview).
 
 ## Pricing
 
